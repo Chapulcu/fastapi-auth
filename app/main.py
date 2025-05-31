@@ -1,15 +1,11 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .database import engine, Base
-from .routers import auth, users
 from .config import settings
-
-# Database tablolarını oluştur
-Base.metadata.create_all(bind=engine)
+from .routers import auth, users, categories, courses
 
 app = FastAPI(
-    title="FastAPI Authentication Service",
-    description="JWT Authentication with Role-based Access Control",
+    title="Learning Management System API",
+    description="A comprehensive LMS API with authentication and course management",
     version="1.0.0"
 )
 
@@ -22,13 +18,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Routers
-app.include_router(auth.router, prefix="/api")
-app.include_router(users.router, prefix="/api")
+# Include routers
+app.include_router(auth.router)
+app.include_router(users.router)
+app.include_router(categories.router)
+app.include_router(courses.router)
 
 @app.get("/")
 async def root():
-    return {"message": "FastAPI Authentication Service is running!"}
+    return {"message": "Learning Management System API"}
 
 @app.get("/health")
 async def health_check():

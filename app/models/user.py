@@ -1,5 +1,6 @@
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Enum
 from sqlalchemy.sql import func
+from sqlalchemy.orm import relationship
 from ..database import Base
 import enum
 
@@ -7,6 +8,8 @@ class UserRole(enum.Enum):
     ADMIN = "admin"
     MANAGER = "manager"
     USER = "user"
+    STUDENT = "student"
+    TEACHER = "teacher"
 
 class User(Base):
     __tablename__ = "users"
@@ -21,3 +24,6 @@ class User(Base):
     role = Column(Enum(UserRole), default=UserRole.USER)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    
+    # Relationships
+    enrollments = relationship("CourseEnrollment", back_populates="user")
