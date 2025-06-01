@@ -31,10 +31,10 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# CORS middleware
+# CORS middleware - Development için açık ayarlar
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:4200", "http://localhost:3000"],
+    allow_origins=["*"],  # Development için tüm origin'lere izin ver
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

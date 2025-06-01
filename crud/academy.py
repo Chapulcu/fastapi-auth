@@ -14,7 +14,10 @@ class AcademyCRUD:
         return db.query(Category).filter(Category.slug == slug).first()
     
     def create_category(self, db: Session, category: CategoryCreate) -> Category:
-        db_category = Category(**category.dict())
+        db_category = Category(
+            id=str(uuid.uuid4()),
+            **category.dict()
+        )
         db.add(db_category)
         db.commit()
         db.refresh(db_category)
@@ -22,34 +25,54 @@ class AcademyCRUD:
     
     # Courses
     def get_courses(self, db: Session, user_id: Optional[str] = None) -> List[Course]:
-        query = db.query(Course).options(joinedload(Course.category_rel))
-        courses = query.all()
-        
-        # Add default progress information
-        for course in courses:
-            if user_id:
-                progress = db.query(CourseProgress).filter(
-                    CourseProgress.course_id == course.id,
-                    CourseProgress.user_id == user_id
-                ).first()
-                
-                if progress:
-                    course.progress = progress
+        try:
+            courses = db.query(Course).all()
+            
+            # Add default progress information
+            for course in courses:
+                if user_id:
+                    progress = db.query(CourseProgress).filter(
+                        CourseProgress.course_id == course.id,
+                        CourseProgress.user_id == user_id
+                    ).first()
+                    
+                    if progress:
+                        course.progress = progress
+                    else:
+                        # Create default progress object (not saved to DB)
+                        course.progress = type('Progress', (), {
+                            'current_step': 0, 
+                            'completed': 0
+                        })()
                 else:
-                    # Create default progress
-                    course.progress = CourseProgress(current_step=0, completed=0)
-            else:
-                course.progress = CourseProgress(current_step=0, completed=0)
-        
-        return courses
+                    # Create default progress object
+                    course.progress = type('Progress', (), {
+                        'current_step': 0, 
+                        'completed': 0
+                    })()
+            
+            return courses
+        except Exception as e:
+            print(f"Error in get_courses: {e}")
+            return []
     
     def get_course_by_id(self, db: Session, course_id: str, user_id: Optional[str] = None) -> Optional[Course]:
-        course = db.query(Course).options(
-            joinedload(Course.category_rel),
-            joinedload(Course.steps)
-        ).filter(Course.id == course_id).first()
-        
-        if course:
+        try:
+            course = db.query(Course).filter(Course.id == course_id).first()
+            
+            if not course:
+                return None
+            
+            # Get steps for this course
+            steps = db.query(Step).join(
+                course.steps.property.secondary
+            ).filter(
+                course.steps.property.secondary.c.course_id == course_id
+            ).order_by(Step.order).all()
+            
+            course.steps = steps
+            
+            # Add progress information
             if user_id:
                 progress = db.query(CourseProgress).filter(
                     CourseProgress.course_id == course_id,
@@ -59,18 +82,27 @@ class AcademyCRUD:
                 if progress:
                     course.progress = progress
                 else:
-                    course.progress = CourseProgress(current_step=0, completed=0)
+                    course.progress = type('Progress', (), {
+                        'current_step': 0, 
+                        'completed': 0
+                    })()
             else:
-                course.progress = CourseProgress(current_step=0, completed=0)
+                course.progress = type('Progress', (), {
+                    'current_step': 0, 
+                    'completed': 0
+                })()
             
-            # Sort steps by order
-            if course.steps:
-                course.steps.sort(key=lambda x: x.order)
-        
-        return course
+            return course
+            
+        except Exception as e:
+            print(f"Error in get_course_by_id: {e}")
+            return None
     
     def create_course(self, db: Session, course: CourseCreate) -> Course:
-        db_course = Course(**course.dict())
+        db_course = Course(
+            id=str(uuid.uuid4()),
+            **course.dict()
+        )
         db.add(db_course)
         db.commit()
         db.refresh(db_course)
@@ -78,7 +110,10 @@ class AcademyCRUD:
     
     # Steps
     def create_step(self, db: Session, step: StepCreate) -> Step:
-        db_step = Step(**step.dict())
+        db_step = Step(
+            id=str(uuid.uuid4()),
+            **step.dict()
+        )
         db.add(db_step)
         db.commit()
         db.refresh(db_step)

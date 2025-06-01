@@ -1,12 +1,16 @@
-from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, ForeignKey, Table
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, String, Integer, Boolean, DateTime, Text, ForeignKey, Table
 from sqlalchemy.ext.declarative import declarative_base
-from datetime import datetime
+from sqlalchemy.orm import relationship
+from sqlalchemy.sql import func
 import uuid
+from datetime import datetime
 
 Base = declarative_base()
 
-# Many-to-many relationship table for course steps
+def generate_uuid():
+    return str(uuid.uuid4())
+
+# Association table for many-to-many relationship between courses and steps
 course_steps = Table(
     'course_steps',
     Base.metadata,
@@ -17,53 +21,55 @@ course_steps = Table(
 class User(Base):
     __tablename__ = "users"
     
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    username = Column(String(50), unique=True, nullable=False)
-    email = Column(String(100), unique=True, nullable=False)
-    full_name = Column(String(100))
-    hashed_password = Column(String(255), nullable=False)
+    id = Column(String, primary_key=True, default=generate_uuid)
+    username = Column(String, unique=True, index=True, nullable=False)
+    email = Column(String, unique=True, index=True, nullable=False)
+    full_name = Column(String, nullable=True)
+    hashed_password = Column(String, nullable=False)
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
     # Relationships
-    course_progress = relationship("CourseProgress", back_populates="user_rel")
+    course_progress = relationship("CourseProgress", back_populates="user")
 
 class Category(Base):
     __tablename__ = "categories"
     
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    title = Column(String(100), nullable=False)
-    slug = Column(String(100), unique=True, nullable=False)
+    id = Column(String, primary_key=True, default=generate_uuid)
+    title = Column(String, nullable=False)
+    slug = Column(String, unique=True, index=True, nullable=False)
     
-    # Relationship
+    # Relationships
     courses = relationship("Course", back_populates="category_rel")
 
 class Course(Base):
     __tablename__ = "courses"
     
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    title = Column(String(200), nullable=False)
-    slug = Column(String(200), unique=True, nullable=False)
-    description = Column(Text)
-    category = Column(String, ForeignKey('categories.slug'), nullable=False)
-    duration = Column(Integer, default=0)  # in minutes
+    id = Column(String, primary_key=True, default=generate_uuid)
+    title = Column(String, nullable=False)
+    slug = Column(String, unique=True, index=True, nullable=False)
+    description = Column(Text, nullable=True)
+    category = Column(String, ForeignKey("categories.slug"), nullable=False)
+    duration = Column(Integer, default=0)
     total_steps = Column(Integer, default=0)
-    updated_at = Column(DateTime, default=datetime.utcnow)
     featured = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
     # Relationships
     category_rel = relationship("Category", back_populates="courses")
     steps = relationship("Step", secondary=course_steps, back_populates="courses")
-    progress_records = relationship("CourseProgress", back_populates="course_rel")
+    course_progress = relationship("CourseProgress", back_populates="course")
 
 class Step(Base):
     __tablename__ = "steps"
     
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    id = Column(String, primary_key=True, default=generate_uuid)
     order = Column(Integer, nullable=False)
-    title = Column(String(200), nullable=False)
-    subtitle = Column(String(300))
-    content = Column(Text)
+    title = Column(String, nullable=False)
+    subtitle = Column(String, nullable=True)
+    content = Column(Text, nullable=True)
     
     # Relationships
     courses = relationship("Course", secondary=course_steps, back_populates="steps")
@@ -71,12 +77,14 @@ class Step(Base):
 class CourseProgress(Base):
     __tablename__ = "course_progress"
     
-    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    user_id = Column(String, ForeignKey('users.id'), nullable=False)
-    course_id = Column(String, ForeignKey('courses.id'), nullable=False)
+    id = Column(String, primary_key=True, default=generate_uuid)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False)
+    course_id = Column(String, ForeignKey("courses.id"), nullable=False)
     current_step = Column(Integer, default=0)
     completed = Column(Integer, default=0)
+    created_at = Column(DateTime, default=func.now())
+    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
     
     # Relationships
-    user_rel = relationship("User", back_populates="course_progress")
-    course_rel = relationship("Course", back_populates="progress_records")
+    user = relationship("User", back_populates="course_progress")
+    course = relationship("Course", back_populates="course_progress")
