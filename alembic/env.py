@@ -1,8 +1,9 @@
 from logging.config import fileConfig
 from sqlalchemy import engine_from_config, pool
 from alembic import context
-from models.user import Base as UserBase
-from models.academy import Base as AcademyBase
+
+# Import the Base from our app
+from app.database import Base
 
 # this is the Alembic Config object
 config = context.config
@@ -11,8 +12,8 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Combine all models
-target_metadata = [UserBase.metadata, AcademyBase.metadata]
+# Use the Base metadata from our app
+target_metadata = Base.metadata
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode."""
