@@ -1,18 +1,13 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-import os
+from app.config import settings # Import settings
 
-# Database URL - adjust this based on your database choice
-SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./academy.db")
+# Database URL - uses the value from app.config which includes environment variable override
+SQLALCHEMY_DATABASE_URL = settings.DATABASE_URL
 
-# For SQLite, we need to enable check_same_thread=False
-if SQLALCHEMY_DATABASE_URL.startswith("sqlite"):
-    engine = create_engine(
-        SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}, echo=True
-    )
-else:
-    engine = create_engine(SQLALCHEMY_DATABASE_URL, echo=True)
+# Create engine (removed SQLite specific connect_args)
+engine = create_engine(SQLALCHEMY_DATABASE_URL, echo=True)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
